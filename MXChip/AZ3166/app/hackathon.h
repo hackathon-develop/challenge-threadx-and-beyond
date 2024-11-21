@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <tx_api.h>
 
+#include "mqtt.h"
 #include "sensor.h"
 #include "ssd1306.h"
 #include "stm32f412rx.h"
 #include "string.h"
 #include "tx_port.h"
 #include "wwd_networking.h"
-#include "mqtt.h"
 
-#define ECLIPSETX_THREAD_PRIORITY   4
+#define ECLIPSETX_THREAD_PRIORITY 4
 
 static volatile lsm6dsl_data_t xxx_imu_data;
 static volatile UCHAR xxx_imu_data_ready = 0;
@@ -20,7 +20,7 @@ static volatile UCHAR xxx_imu_data_ready = 0;
 #define NETWORK_THREAD_STACK_SIZE 4096
 TX_THREAD xxx_network_thread;
 ULONG xxx_network_thread_stack[NETWORK_THREAD_STACK_SIZE / sizeof(ULONG)];
-static NXD_MQTT_CLIENT          mqtt_client;
+static NXD_MQTT_CLIENT mqtt_client;
 
 static volatile UCHAR xxx_network_ready = 0;
 // Entry function to setup the network
@@ -30,11 +30,11 @@ static void xxx_network_thread_entry(ULONG parameter)
     UINT status;
 
     // buffer for string formatting
-    CHAR buffer[64] = "";
+    CHAR buffer[64]   = "";
     size_t buffer_len = sizeof(buffer);
 
     printf("INFO: Initializing the network");
-    
+
     // Initialize the network
     if ((status = wwd_network_init(WIFI_SSID, WIFI_PASSWORD, WIFI_MODE)))
     {
@@ -57,22 +57,25 @@ static void xxx_network_thread_entry(ULONG parameter)
     }
     printf("INFO: Connected to MQTT broker\n");
 
-    while (1){
-        if (xxx_imu_data_ready){
-            snprintf(buffer, buffer_len, "a:%03d, b:%03d ,c:%03d",
-                (int16_t) (xxx_imu_data.angular_rate_mdps[0]/(float) 100.0), 
-                (int16_t) (xxx_imu_data.angular_rate_mdps[1]/(float) 100.0),
-                (int16_t) (xxx_imu_data.angular_rate_mdps[2]/(float) 100.0));
+    while (1)
+    {
+        if (xxx_imu_data_ready)
+        {
+            snprintf(buffer,
+                buffer_len,
+                "a:%03d, b:%03d ,c:%03d",
+                (int16_t)(xxx_imu_data.angular_rate_mdps[0] / (float)100.0),
+                (int16_t)(xxx_imu_data.angular_rate_mdps[1] / (float)100.0),
+                (int16_t)(xxx_imu_data.angular_rate_mdps[2] / (float)100.0));
 
             mqtt_client_publish(buffer);
         }
 
-        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND*1);
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND * 1);
     }
 
     mqtt_client_disconnect();
 }
-
 
 //
 // Sensor Thread
@@ -94,13 +97,13 @@ static void xxx_sensor_thread_entry(ULONG parameter)
         return;
     }
 
-    while (1){
-        xxx_imu_data = lsm6dsl_data_read();
+    while (1)
+    {
+        xxx_imu_data       = lsm6dsl_data_read();
         xxx_imu_data_ready = 1;
-        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND/5);
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 5);
     }
 }
-
 
 //
 // Display Thread
@@ -136,95 +139,92 @@ static void xxx_display_thread_entry(ULONG parameter)
 
     ssd1306_Fill(Black);
 
-    ssd1306_DrawRectangle(DISPLAY_X_MIN,
-                          DISPLAY_ORANGE_SECTION_Y_MIN,
-                          DISPLAY_X_MAX,
-                          DISPLAY_ORANGE_SECTION_Y_MAX,
-                          White);
+    ssd1306_DrawRectangle(
+        DISPLAY_X_MIN, DISPLAY_ORANGE_SECTION_Y_MIN, DISPLAY_X_MAX, DISPLAY_ORANGE_SECTION_Y_MAX, White);
 
-    ssd1306_DrawRectangle(DISPLAY_X_MIN,
-                          DISPLAY_BLUE_SECTION_Y_MIN,
-                          DISPLAY_X_MAX,
-                          DISPLAY_BLUE_SECTION_Y_MAX,
-                          White);
+    ssd1306_DrawRectangle(DISPLAY_X_MIN, DISPLAY_BLUE_SECTION_Y_MIN, DISPLAY_X_MAX, DISPLAY_BLUE_SECTION_Y_MAX, White);
     ssd1306_UpdateScreen();
 
     // buffer for string formatting
-    CHAR buffer[64] = "";
+    CHAR buffer[64]   = "";
     size_t buffer_len = sizeof(buffer);
 
-    while(1) {
+    while (1)
+    {
         { // write IP address
             ULONG ip_address;
             ULONG network_mask;
-            if (xxx_network_ready){
+            if (xxx_network_ready)
+            {
                 nx_ip_address_get(&nx_ip, &ip_address, &network_mask);
-                snprintf(buffer, buffer_len , "IP=%3d.%3d.%3d.%3d", 
-                        (uint8_t) (ip_address>>24),
-                        (uint8_t) ((ip_address>>16) & 0xff),
-                        (uint8_t) ((ip_address >>8) & 0xff),
-                        (uint8_t) (ip_address & 0xff));
-            } else {
-                strlcpy(buffer,"IP=xxx.xxx.xxx.xxx", buffer_len);
+                snprintf(buffer,
+                    buffer_len,
+                    "IP=%3d.%3d.%3d.%3d",
+                    (uint8_t)(ip_address >> 24),
+                    (uint8_t)((ip_address >> 16) & 0xff),
+                    (uint8_t)((ip_address >> 8) & 0xff),
+                    (uint8_t)(ip_address & 0xff));
+            }
+            else
+            {
+                strlcpy(buffer, "IP=xxx.xxx.xxx.xxx", buffer_len);
             }
 
-            ssd1306_DrawRectangle(
-                                  DISPLAY_X_MIN + 1,
-                                  DISPLAY_ORANGE_SECTION_Y_MIN + 1,
-                                  DISPLAY_X_MAX - 1,
-                                  DISPLAY_ORANGE_SECTION_Y_MAX - 1,
-                                  Black);
-            ssd1306_SetCursor(DISPLAY_X_MIN +1, DISPLAY_ORANGE_SECTION_Y_MIN + 1);
+            ssd1306_DrawRectangle(DISPLAY_X_MIN + 1,
+                DISPLAY_ORANGE_SECTION_Y_MIN + 1,
+                DISPLAY_X_MAX - 1,
+                DISPLAY_ORANGE_SECTION_Y_MAX - 1,
+                Black);
+            ssd1306_SetCursor(DISPLAY_X_MIN + 1, DISPLAY_ORANGE_SECTION_Y_MIN + 1);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
-
         { // write IMU acceleration
-            if (xxx_imu_data_ready){
-                snprintf(buffer, buffer_len, "x=%3d y=%3d z=%3d",
-                    (int16_t) (xxx_imu_data.acceleration_mg[0]/(float) 20.0), 
-                    (int16_t) (xxx_imu_data.acceleration_mg[1]/(float) 20.0),
-                    (int16_t) (xxx_imu_data.acceleration_mg[2]/(float) 20.0));
-            }else{
-                strlcpy(buffer,"no IMU", buffer_len );
+            if (xxx_imu_data_ready)
+            {
+                snprintf(buffer,
+                    buffer_len,
+                    "x=%3d y=%3d z=%3d",
+                    (int16_t)(xxx_imu_data.acceleration_mg[0] / (float)20.0),
+                    (int16_t)(xxx_imu_data.acceleration_mg[1] / (float)20.0),
+                    (int16_t)(xxx_imu_data.acceleration_mg[2] / (float)20.0));
+            }
+            else
+            {
+                strlcpy(buffer, "no IMU", buffer_len);
             }
 
             ssd1306_DrawRectangle(
-                                  DISPLAY_X_MIN +1,
-                                  DISPLAY_BLUE_SECTION_Y_MIN + 1,
-                                  DISPLAY_X_MAX -1,
-                                  DISPLAY_Y_MAX -1,
-                                  Black);
+                DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, Black);
 
             ssd1306_SetCursor(1, DISPLAY_BLUE_SECTION_Y_MIN + 1);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
-        
         { // write IMU gyro
-            if (xxx_imu_data_ready){
-                snprintf(buffer, buffer_len, "a=%3d b=%3d c=%3d",
-                    (int16_t) (xxx_imu_data.angular_rate_mdps[0]/(float) 100.0), 
-                    (int16_t) (xxx_imu_data.angular_rate_mdps[1]/(float) 100.0),
-                    (int16_t) (xxx_imu_data.angular_rate_mdps[2]/(float) 100.0));
-            }else{
-                strlcpy(buffer,"no IMU", buffer_len );
+            if (xxx_imu_data_ready)
+            {
+                snprintf(buffer,
+                    buffer_len,
+                    "a=%3d b=%3d c=%3d",
+                    (int16_t)(xxx_imu_data.angular_rate_mdps[0] / (float)100.0),
+                    (int16_t)(xxx_imu_data.angular_rate_mdps[1] / (float)100.0),
+                    (int16_t)(xxx_imu_data.angular_rate_mdps[2] / (float)100.0));
+            }
+            else
+            {
+                strlcpy(buffer, "no IMU", buffer_len);
             }
 
             ssd1306_DrawRectangle(
-                                  DISPLAY_X_MIN +1,
-                                  DISPLAY_BLUE_SECTION_Y_MIN + 1 + 11 ,
-                                  DISPLAY_X_MAX -1,
-                                  DISPLAY_Y_MAX -1,
-                                  Black);
+                DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1 + 11, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, Black);
 
             ssd1306_SetCursor(1, DISPLAY_BLUE_SECTION_Y_MIN + 1 + 11);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
-
         ssd1306_UpdateScreen();
-        
-        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND/3);
+
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 3);
     }
 }
