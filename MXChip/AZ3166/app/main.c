@@ -1,14 +1,14 @@
-/* 
+/*
  * Copyright (c) Microsoft
  * Copyright (c) 2024 Eclipse Foundation
- * 
- *  This program and the accompanying materials are made available 
+ *
+ *  This program and the accompanying materials are made available
  *  under the terms of the MIT license which is available at
  *  https://opensource.org/license/mit.
- * 
+ *
  *  SPDX-License-Identifier: MIT
- * 
- *  Contributors: 
+ *
+ *  Contributors:
  *     Microsoft         - Initial version
  *     Frédéric Desbiens - 2024 version.
  */
@@ -60,7 +60,7 @@ void tx_application_define(void* first_unused_memory)
     {
         printf("ERROR: sensor thread creation failed\r\n");
     }
-    
+
     status = tx_thread_create(&xxx_display_thread,
         "Eclipse ThreadX display Thread",
         xxx_display_thread_entry,

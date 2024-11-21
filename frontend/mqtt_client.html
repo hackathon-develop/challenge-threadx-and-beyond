@@ -1,78 +1,82 @@
-
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Websockets using JavaScript MQTT Client interface">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Websockets using JavaScript MQTT Client interface"
+    />
     <title>MQTT Client Interface</title>
 
     <!-- External Stylesheet -->
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f9;
-            color: #333;
-            line-height: 1.6;
-        }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f9;
+        color: #333;
+        line-height: 1.6;
+      }
 
-        header, footer {
-            background-color: #333;
-            color: white;
-            text-align: center;
-            padding: 1rem 0;
-        }
+      header,
+      footer {
+        background-color: #333;
+        color: white;
+        text-align: center;
+        padding: 1rem 0;
+      }
 
-        main {
-            padding: 1rem;
-            max-width: 800px;
-            margin: auto;
-        }
+      main {
+        padding: 1rem;
+        max-width: 800px;
+        margin: auto;
+      }
 
-        section {
-            margin-bottom: 1.5rem;
-        }
+      section {
+        margin-bottom: 1.5rem;
+      }
 
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: bold;
-        }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: bold;
+      }
 
-        input, button {
-            width: 100%;
-            padding: 0.5rem;
-            margin-bottom: 1rem;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
+      input,
+      button {
+        width: 100%;
+        padding: 0.5rem;
+        margin-bottom: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
 
-        #messages {
-            background-color: #fffae6;
-            padding: 1rem;
-            border: 1px solid #e6e6e6;
-            border-radius: 4px;
-            margin-top: 1rem;
-        }
+      #messages {
+        background-color: #fffae6;
+        padding: 1rem;
+        border: 1px solid #e6e6e6;
+        border-radius: 4px;
+        margin-top: 1rem;
+      }
 
-        #status {
-            padding: 1rem;
-            color: white;
-            font-weight: bold;
-            text-align: center;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
+      #status {
+        padding: 1rem;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+      }
 
-        .status-connected {
-            background-color: green;
-        }
+      .status-connected {
+        background-color: green;
+      }
 
-        .status-disconnected {
-            background-color: red;
-        }
+      .status-disconnected {
+        background-color: red;
+      }
     </style>
 
     <!-- Include Paho MQTT Client library -->
@@ -80,103 +84,102 @@
     <!-- Latest jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.1.min.js"></script>
     <script>
-        let client, connectedFlag = 0;
+      let client,
+        connectedFlag = 0;
 
-        // Connect to MQTT Broker
-        function connectToBroker() {
-            const broker = document.getElementById("broker").value;
-            const port = document.getElementById("port").value;
-            const clientId = "client-" + Math.random().toString(16).substr(2, 8);
-            client = new Paho.MQTT.Client(broker, parseInt(port), clientId);
+      // Connect to MQTT Broker
+      function connectToBroker() {
+        const broker = document.getElementById("broker").value;
+        const port = document.getElementById("port").value;
+        const clientId = "client-" + Math.random().toString(16).substr(2, 8);
+        client = new Paho.MQTT.Client(broker, parseInt(port), clientId);
 
-            client.onConnectionLost = onConnectionLost;
-            client.onMessageArrived = onMessageArrived;
+        client.onConnectionLost = onConnectionLost;
+        client.onMessageArrived = onMessageArrived;
 
-            client.connect({
-                onSuccess: onConnect,
-                onFailure: onFail,
-            });
+        client.connect({
+          onSuccess: onConnect,
+          onFailure: onFail,
+        });
+      }
+
+      function onConnect() {
+        console.log("Connected to broker");
+        connectedFlag = 1;
+        updateStatus("Connected", "status-connected");
+      }
+
+      function onFail() {
+        console.error("Connection failed");
+        updateStatus("Connection Failed", "status-disconnected");
+        connectedFlag = 0;
+      }
+
+      function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+          console.error("Connection lost: " + responseObject.errorMessage);
+        }
+        updateStatus("Connection Lost", "status-disconnected");
+        connectedFlag = 0;
+      }
+
+      // Subscribe to Topic
+      function subscribeToTopic() {
+        if (!connectedFlag) {
+          alert("Not connected to broker!");
+          return;
         }
 
-        function onConnect() {
-            console.log("Connected to broker");
-            connectedFlag = 1;
-            updateStatus("Connected", "status-connected");
-        }
+        const topic = document.getElementById("topic").value;
+        client.subscribe(topic);
+        console.log("Subscribed to topic:", topic);
+      }
 
-        function onFail() {
-            console.error("Connection failed");
-            updateStatus("Connection Failed", "status-disconnected");
-            connectedFlag = 0;
-        }
+      function onMessageArrived(message) {
+        console.log("Message arrived:", message.payloadString);
+        const messages = document.getElementById("messages");
+        const newMessage = document.createElement("div");
+        newMessage.textContent = `Topic: ${message.destinationName} | Message: ${message.payloadString}`;
+        messages.appendChild(newMessage);
+      }
 
-        function onConnectionLost(responseObject) {
-            if (responseObject.errorCode !== 0) {
-                console.error("Connection lost: " + responseObject.errorMessage);
-            }
-            updateStatus("Connection Lost", "status-disconnected");
-            connectedFlag = 0;
-        }
-
-        // Subscribe to Topic
-        function subscribeToTopic() {
-            if (!connectedFlag) {
-                alert("Not connected to broker!");
-                return;
-            }
-
-            const topic = document.getElementById("topic").value;
-            client.subscribe(topic);
-            console.log("Subscribed to topic:", topic);
-        }
-
-        function onMessageArrived(message) {
-            console.log("Message arrived:", message.payloadString);
-            const messages = document.getElementById("messages");
-            const newMessage = document.createElement("div");
-            newMessage.textContent = `Topic: ${message.destinationName} | Message: ${message.payloadString}`;
-            messages.appendChild(newMessage);
-        }
-
-        function updateStatus(text, statusClass) {
-            const statusElement = document.getElementById("status");
-            statusElement.textContent = text;
-            statusElement.className = statusClass;
-        }
+      function updateStatus(text, statusClass) {
+        const statusElement = document.getElementById("status");
+        statusElement.textContent = text;
+        statusElement.className = statusClass;
+      }
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <header>
-        <h1>Websockets Using JavaScript MQTT Client</h1>
+      <h1>Websockets Using JavaScript MQTT Client</h1>
     </header>
 
     <main>
-        <section id="status" class="status-disconnected">
-            Disconnected
-        </section>
+      <section id="status" class="status-disconnected">Disconnected</section>
 
-        <section>
-            <label for="broker">MQTT Broker:</label>
-            <input type="text" id="broker" placeholder="e.g., test.mosquitto.org">
-            <input type="number" id="port" placeholder="e.g., 8080">
+      <section>
+        <label for="broker">MQTT Broker:</label>
+        <input type="text" id="broker" placeholder="e.g., test.mosquitto.org" />
+        <input type="number" id="port" placeholder="e.g., 8080" />
 
-            <button onclick="connectToBroker()">Connect</button>
-        </section>
+        <button onclick="connectToBroker()">Connect</button>
+      </section>
 
-        <section>
-            <label for="topic">Topic:</label>
-            <input type="text" id="topic" placeholder="e.g., test/topic">
+      <section>
+        <label for="topic">Topic:</label>
+        <input type="text" id="topic" placeholder="e.g., test/topic" />
 
-            <button onclick="subscribeToTopic()">Subscribe</button>
-        </section>
+        <button onclick="subscribeToTopic()">Subscribe</button>
+      </section>
 
-        <section id="messages">
-            <h2>Messages</h2>
-        </section>
+      <section id="messages">
+        <h2>Messages</h2>
+      </section>
     </main>
 
     <footer>
-        <p>Powered by Paho MQTT and JavaScript</p>
+      <p>Powered by Paho MQTT and JavaScript</p>
     </footer>
-</body>
+  </body>
 </html>

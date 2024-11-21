@@ -1,0 +1,9 @@
+BasedOnStyle: Microsoft
+
+AlignAfterOpenBracket: false
+AlignConsecutiveAssignments: true
+AlignConsecutiveMacros: true
+AllowAllArgumentsOnNextLine: true
+BinPackArguments: false
+IndentCaseLabels: true
+PointerAlignment: Left

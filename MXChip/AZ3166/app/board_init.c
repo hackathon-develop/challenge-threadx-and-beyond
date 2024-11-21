@@ -1,18 +1,18 @@
-/* 
+/*
  * Copyright (c) Microsoft
  * Copyright (c) 2024 Eclipse Foundation
- * 
- *  This program and the accompanying materials are made available 
+ *
+ *  This program and the accompanying materials are made available
  *  under the terms of the MIT license which is available at
  *  https://opensource.org/license/mit.
- * 
+ *
  *  SPDX-License-Identifier: MIT
- * 
- *  Contributors: 
+ *
+ *  Contributors:
  *     Microsoft         - Initial version
  *     Frédéric Desbiens - 2024 version.
  */
- 
+
 #include "board_init.h"
 
 #include <stdio.h>

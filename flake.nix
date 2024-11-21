@@ -3,10 +3,21 @@
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
 
-  outputs = { self, nixpkgs, flake-utils }:
+  inputs.treefmt-nix = {
+    url = "github:numtide/treefmt-nix";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
+  outputs = { self, nixpkgs, flake-utils, treefmt-nix }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages.${system}; in
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+
+        # universal formatter
+        treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
+      in
       {
+        # for `nix build`
         packages = {
           default = pkgs.callPackage
             ({ stdenvNoCC, cmake, ninja, gcc-arm-embedded }:
@@ -39,6 +50,8 @@
               })
             { };
         };
+
+        # for `nix run`
         apps = {
           flash = flake-utils.lib.mkApp {
             drv = pkgs.writeShellApplication {
@@ -56,6 +69,12 @@
             };
           };
         };
+
+        # for `nix fmt`
+        formatter = treefmtEval.config.build.wrapper;
+
+        # for `nix flake check`
+        checks.formatting = treefmtEval.config.build.check self;
       }
     );
 }
