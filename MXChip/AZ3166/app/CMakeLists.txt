@@ -36,6 +36,7 @@ target_link_libraries(${PROJECT_NAME}
     app_common
     jsmn
     wiced_sdk
+    zenohpico::lib # must match the name of the static lib file
 )
 
 target_include_directories(${PROJECT_NAME} 
