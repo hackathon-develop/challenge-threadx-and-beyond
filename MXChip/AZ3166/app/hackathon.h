@@ -1,10 +1,10 @@
+#include <math.h>
 #include <stdio.h>
 #include <tx_api.h>
 
 #include "mqtt.h"
 #include "sensor.h"
 #include "ssd1306.h"
-#include "stm32f412rx.h"
 #include "string.h"
 #include "tx_port.h"
 #include "wwd_networking.h"
@@ -270,6 +270,27 @@ static void xxx_display_thread_entry(ULONG parameter)
 
             ssd1306_SetCursor(2, DISPLAY_BLUE_SECTION_Y_MIN + 2 + fh);
             ssd1306_WriteString(buffer, Font_7x10, White);
+        }
+
+        // display compass
+        if (xxx_mag_data_ready)
+        {
+            float mag_x = xxx_mag_data.magnetic_mG[0];
+            float mag_y = xxx_mag_data.magnetic_mG[1];
+
+            float angle_rad = atan2f(mag_y, mag_x);
+
+            const uint8_t radius = 12;
+            const uint8_t x      = 114;
+            const uint8_t y      = DISPLAY_BLUE_SECTION_Y_MIN + 2 + 32;
+
+            ssd1306_DrawCircle(x, y, radius, White);
+
+            ssd1306_Line(x,
+                y,
+                (int8_t)x + (int8_t)((float)radius * cosf(angle_rad)),
+                (int8_t)y + (int8_t)((float)radius * sinf(angle_rad)),
+                White);
         }
 
         { // write humidity
