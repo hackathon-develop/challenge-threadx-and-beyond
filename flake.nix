@@ -68,6 +68,15 @@
               '';
             };
           };
+          serial-monitor = flake-utils.lib.mkApp {
+            drv = pkgs.writeShellApplication {
+              name = "serial-monitor";
+              runtimeInputs = [ pkgs.picocom ];
+              text = ''
+                picocom --baud 115200 -- /dev/serial/by-id/usb-STMicroelectronics_STM32_STLink_*
+              '';
+            };
+          };
         };
 
         # for `nix fmt`
