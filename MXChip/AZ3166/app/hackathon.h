@@ -1,10 +1,10 @@
+#include <math.h>
 #include <stdio.h>
 #include <tx_api.h>
 
 #include "mqtt.h"
 #include "sensor.h"
 #include "ssd1306.h"
-#include "stm32f412rx.h"
 #include "string.h"
 #include "tx_port.h"
 #include "wwd_networking.h"
@@ -13,6 +13,15 @@
 
 static volatile lsm6dsl_data_t xxx_imu_data;
 static volatile UCHAR xxx_imu_data_ready = 0;
+
+static volatile lis2mdl_data_t xxx_mag_data;
+static volatile UCHAR xxx_mag_data_ready = 0;
+
+static volatile lps22hb_t xxx_pressure_data;
+static volatile UCHAR xxx_pressure_data_ready = 0;
+
+static volatile hts221_data_t xxx_humidity_data;
+static volatile UCHAR xxx_humidity_data_ready = 0;
 
 //
 // Network Thread
@@ -85,6 +94,9 @@ TX_THREAD xxx_sensor_thread;
 ULONG xxx_sensor_thread_stack[SENSOR_THREAD_STACK_SIZE / sizeof(ULONG)];
 
 // Entry function for the sensor thread
+//
+// As multiple sensors share the same I2C bus, putting the pollling for all of them into on e thread
+// makes sure that there is no unnecessary bus contention.
 static void xxx_sensor_thread_entry(ULONG parameter)
 {
     xxx_imu_data_ready = 0;
@@ -97,10 +109,41 @@ static void xxx_sensor_thread_entry(ULONG parameter)
         return;
     }
 
+    printf("INFO: Initializing the Mag");
+    if ((status = lis2mdl_config()))
+    {
+        printf("ERROR: failled to configure Mag sensor");
+        return;
+    }
+
+    printf("INFO: Initializing the Pressure");
+    if ((status = lps22hb_config()))
+    {
+        printf("ERROR: failled to configure Pressure sensor");
+        return;
+    }
+
+    printf("INFO: Initializing the humidity");
+    if ((status = hts221_config()))
+    {
+        printf("ERROR: failled to configure humidity sensor");
+        return;
+    }
+
     while (1)
     {
         xxx_imu_data       = lsm6dsl_data_read();
         xxx_imu_data_ready = 1;
+
+        xxx_mag_data       = lis2mdl_data_read();
+        xxx_mag_data_ready = 1;
+
+        xxx_pressure_data       = lps22hb_data_read();
+        xxx_pressure_data_ready = 1;
+
+        xxx_humidity_data       = hts221_data_read();
+        xxx_humidity_data_ready = 1;
+
         tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 5);
     }
 }
@@ -151,6 +194,9 @@ static void xxx_display_thread_entry(ULONG parameter)
 
     while (1)
     {
+        // blank the screen
+        ssd1306_Fill(Black);
+
         { // write IP address
             ULONG ip_address;
             ULONG network_mask;
@@ -159,7 +205,7 @@ static void xxx_display_thread_entry(ULONG parameter)
                 nx_ip_address_get(&nx_ip, &ip_address, &network_mask);
                 snprintf(buffer,
                     buffer_len,
-                    "IP=%3d.%3d.%3d.%3d",
+                    " %3d.%3d.%3d.%3d",
                     (uint8_t)(ip_address >> 24),
                     (uint8_t)((ip_address >> 16) & 0xff),
                     (uint8_t)((ip_address >> 8) & 0xff),
@@ -167,19 +213,28 @@ static void xxx_display_thread_entry(ULONG parameter)
             }
             else
             {
-                strlcpy(buffer, "IP=xxx.xxx.xxx.xxx", buffer_len);
+                strlcpy(buffer, " xxx.xxx.xxx.xxx", buffer_len);
             }
 
+            // draw the orange rectangle
             ssd1306_DrawRectangle(DISPLAY_X_MIN + 1,
                 DISPLAY_ORANGE_SECTION_Y_MIN + 1,
                 DISPLAY_X_MAX - 1,
                 DISPLAY_ORANGE_SECTION_Y_MAX - 1,
-                Black);
-            ssd1306_SetCursor(DISPLAY_X_MIN + 1, DISPLAY_ORANGE_SECTION_Y_MIN + 1);
+                White);
+
+            ssd1306_SetCursor(DISPLAY_X_MIN + 2, DISPLAY_ORANGE_SECTION_Y_MIN + 2);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
-        { // write IMU acceleration
+        // draw the blue rectangle
+        ssd1306_DrawRectangle(
+            DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, White);
+
+        // height of the font
+        uint8_t const fh = 11;
+
+        { // write IMU accel
             if (xxx_imu_data_ready)
             {
                 snprintf(buffer,
@@ -194,10 +249,7 @@ static void xxx_display_thread_entry(ULONG parameter)
                 strlcpy(buffer, "no IMU", buffer_len);
             }
 
-            ssd1306_DrawRectangle(
-                DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, Black);
-
-            ssd1306_SetCursor(1, DISPLAY_BLUE_SECTION_Y_MIN + 1);
+            ssd1306_SetCursor(2, DISPLAY_BLUE_SECTION_Y_MIN + 2);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
@@ -216,15 +268,69 @@ static void xxx_display_thread_entry(ULONG parameter)
                 strlcpy(buffer, "no IMU", buffer_len);
             }
 
-            ssd1306_DrawRectangle(
-                DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1 + 11, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, Black);
+            ssd1306_SetCursor(2, DISPLAY_BLUE_SECTION_Y_MIN + 2 + fh);
+            ssd1306_WriteString(buffer, Font_7x10, White);
+        }
 
-            ssd1306_SetCursor(1, DISPLAY_BLUE_SECTION_Y_MIN + 1 + 11);
+        // display compass
+        if (xxx_mag_data_ready)
+        {
+            float mag_x = xxx_mag_data.magnetic_mG[0];
+            float mag_y = xxx_mag_data.magnetic_mG[1];
+
+            float angle_rad = atan2f(mag_y, mag_x);
+
+            const uint8_t radius = 12;
+            const uint8_t x      = 114;
+            const uint8_t y      = DISPLAY_BLUE_SECTION_Y_MIN + 2 + 32;
+
+            ssd1306_DrawCircle(x, y, radius, White);
+
+            ssd1306_Line(x,
+                y,
+                (int8_t)x + (int8_t)((float)radius * cosf(angle_rad)),
+                (int8_t)y + (int8_t)((float)radius * sinf(angle_rad)),
+                White);
+        }
+
+        { // write humidity
+            if (xxx_humidity_data_ready)
+            {
+                snprintf(buffer,
+                    buffer_len,
+                    "%3d%% RH %3d'C",
+                    (int16_t)xxx_humidity_data.humidity_perc,
+                    (int16_t)xxx_humidity_data.temperature_degC);
+            }
+            else
+            {
+                strlcpy(buffer, "no Humidity", buffer_len);
+            }
+
+            ssd1306_SetCursor(2, DISPLAY_BLUE_SECTION_Y_MIN + 2 + 2 * fh);
+            ssd1306_WriteString(buffer, Font_7x10, White);
+        }
+
+        { // write pressure
+            if (xxx_pressure_data_ready)
+            {
+                snprintf(buffer,
+                    buffer_len,
+                    "%3d hPa %3d'C",
+                    (int16_t)xxx_pressure_data.pressure_hPa,
+                    (int16_t)xxx_pressure_data.temperature_degC);
+            }
+            else
+            {
+                strlcpy(buffer, "no Pressure", buffer_len);
+            }
+
+            ssd1306_SetCursor(2, DISPLAY_BLUE_SECTION_Y_MIN + 2 + 3 * fh);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
         ssd1306_UpdateScreen();
 
-        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 3);
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND / 2);
     }
 }
