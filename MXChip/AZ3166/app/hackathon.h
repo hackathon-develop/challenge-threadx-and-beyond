@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <tx_api.h>
+#include <nx_api.h>
+#include <tx_byte_pool.h>
 
 #include "sensor.h"
 #include "ssd1306.h"
@@ -8,7 +10,6 @@
 #include "tx_port.h"
 #include "wwd_networking.h"
 #include "mqtt.h"
-
 #define ECLIPSETX_THREAD_PRIORITY   4
 
 static volatile lsm6dsl_data_t xxx_imu_data;
@@ -50,6 +51,8 @@ static void xxx_network_thread_entry(ULONG parameter)
     printf("INFO: Network initialization complete\n");
     xxx_network_ready = 1;
 
+    // TODO: set up hacky pico zenoh send config here?
+
     if ((status = mqtt_client_connect_subscribe(&nx_ip, nx_pool)))
     {
         printf("ERROR: failed to connect to an mqtt broker");
@@ -65,6 +68,7 @@ static void xxx_network_thread_entry(ULONG parameter)
                 (int16_t) (xxx_imu_data.angular_rate_mdps[2]/(float) 100.0));
 
             mqtt_client_publish(buffer);
+            // TODO: trigger zenoh send here?
         }
 
         tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND*1);
@@ -121,6 +125,11 @@ ULONG xxx_display_thread_stack[DISPLAY_THREAD_STACK_SIZE / sizeof(ULONG)];
 #define DISPLAY_X_MIN 0
 #define DISPLAY_X_MAX 127
 
+extern NX_PACKET      *packet;
+extern NX_UDP_SOCKET  socket;
+extern TX_THREAD      thread;
+extern NX_PACKET_POOL pool;
+extern NX_IP          ip;
 // Entry function for the display thread
 //
 // The display itself is 128 by 64 pixels.
@@ -226,5 +235,36 @@ static void xxx_display_thread_entry(ULONG parameter)
         ssd1306_UpdateScreen();
         
         tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND/3);
+    }
+}
+
+//
+// Zenohpico Thread
+//
+#define ZENOHPICO_THREAD_STACK_SIZE 4096
+TX_THREAD xxx_zenohpico_thread;
+ULONG xxx_zenohpico_thread_stack[ZENOHPICO_THREAD_STACK_SIZE / sizeof(ULONG)];
+
+// Entry function for the zenohpico thread
+static void xxx_zenohpico_thread_entry(ULONG parameter)
+{
+    xxx_imu_data_ready = 0;
+    UINT status;
+
+    printf("INFO: ZENOHPICO");
+    if ((status = 0))
+    {
+        printf("ERROR: failled setup ZENOHPICO");
+        return;
+    }
+
+    while (1){
+        // TODO: trigger ZENOHPICO send ?
+        printf("%lx ", (unsigned long) packet);
+        printf("%lx ", (unsigned long) &socket);
+        printf("%lx ", (unsigned long) &thread);
+        printf("%lx ", (unsigned long) &pool);
+        printf("%lx \n", (unsigned long) &ip);
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND/100);
     }
 }

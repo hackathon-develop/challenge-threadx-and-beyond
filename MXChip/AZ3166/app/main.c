@@ -76,6 +76,22 @@ void tx_application_define(void* first_unused_memory)
     {
         printf("ERROR: display thread creation failed\r\n");
     }
+
+    status = tx_thread_create(&xxx_zenohpico_thread,
+        "Eclipse ThreadX zenohpico Thread",
+        xxx_zenohpico_thread_entry,
+        0,
+        xxx_zenohpico_thread_stack,
+        ECLIPSETX_THREAD_STACK_SIZE,
+        ECLIPSETX_THREAD_PRIORITY,
+        ECLIPSETX_THREAD_PRIORITY,
+        TX_NO_TIME_SLICE,
+        TX_AUTO_START);
+
+    if (status != TX_SUCCESS)
+    {
+        printf("ERROR: zenohpico thread creation failed\r\n");
+    }
 }
 
 int main(void)
