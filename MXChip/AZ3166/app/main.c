@@ -13,47 +13,27 @@
  *     Frédéric Desbiens - 2024 version.
  */
 
+#include "hackathon.h"
 #include <stdio.h>
 
 #include "tx_api.h"
 
 #include "board_init.h"
 #include "cmsis_utils.h"
-#include "screen.h"
-#include "sntp_client.h"
-#include "wwd_networking.h"
-
-#include "cloud_config.h"
 
 #define ECLIPSETX_THREAD_STACK_SIZE 4096
 #define ECLIPSETX_THREAD_PRIORITY   4
 
-TX_THREAD eclipsetx_thread;
-ULONG eclipsetx_thread_stack[ECLIPSETX_THREAD_STACK_SIZE / sizeof(ULONG)];
-
-static void eclipsetx_thread_entry(ULONG parameter)
-{
-    UINT status;
-
-    printf("Starting Eclipse ThreadX thread\r\n\r\n");
-
-    // Initialize the network
-    if ((status = wwd_network_init(WIFI_SSID, WIFI_PASSWORD, WIFI_MODE)))
-    {
-        printf("ERROR: Failed to initialize the network (0x%08x)\r\n", status);
-    }
-}
-
 void tx_application_define(void* first_unused_memory)
 {
     systick_interval_set(TX_TIMER_TICKS_PER_SECOND);
+    UINT status;
 
-    // Create ThreadX thread
-    UINT status = tx_thread_create(&eclipsetx_thread,
-        "Eclipse ThreadX Thread",
-        eclipsetx_thread_entry,
+    status = tx_thread_create(&xxx_network_thread,
+        "Eclipse ThreadX network Thread",
+        xxx_network_thread_entry,
         0,
-        eclipsetx_thread_stack,
+        xxx_network_thread_stack,
         ECLIPSETX_THREAD_STACK_SIZE,
         ECLIPSETX_THREAD_PRIORITY,
         ECLIPSETX_THREAD_PRIORITY,
@@ -62,7 +42,39 @@ void tx_application_define(void* first_unused_memory)
 
     if (status != TX_SUCCESS)
     {
-        printf("ERROR: Eclipse ThreadX thread creation failed\r\n");
+        printf("ERROR: network thread creation failed\r\n");
+    }
+
+    status = tx_thread_create(&xxx_sensor_thread,
+        "Eclipse ThreadX sensor Thread",
+        xxx_sensor_thread_entry,
+        0,
+        xxx_sensor_thread_stack,
+        ECLIPSETX_THREAD_STACK_SIZE,
+        ECLIPSETX_THREAD_PRIORITY,
+        ECLIPSETX_THREAD_PRIORITY,
+        TX_NO_TIME_SLICE,
+        TX_AUTO_START);
+
+    if (status != TX_SUCCESS)
+    {
+        printf("ERROR: sensor thread creation failed\r\n");
+    }
+    
+    status = tx_thread_create(&xxx_display_thread,
+        "Eclipse ThreadX display Thread",
+        xxx_display_thread_entry,
+        0,
+        xxx_display_thread_stack,
+        ECLIPSETX_THREAD_STACK_SIZE,
+        ECLIPSETX_THREAD_PRIORITY,
+        ECLIPSETX_THREAD_PRIORITY,
+        TX_NO_TIME_SLICE,
+        TX_AUTO_START);
+
+    if (status != TX_SUCCESS)
+    {
+        printf("ERROR: display thread creation failed\r\n");
     }
 }
 
