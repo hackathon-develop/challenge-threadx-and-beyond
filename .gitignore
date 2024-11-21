@@ -4,6 +4,8 @@
 *.htm
 *.map
 *.o
+.cache/
+.direnv/
 .metadata/
 .settings/
 .vscode/
