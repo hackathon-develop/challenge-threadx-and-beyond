@@ -6,4 +6,4 @@
 	url = https://github.com/eclipse-threadx/netxduo.git
 [submodule "shared/lib/zenoh-pico"]
 	path = shared/lib/zenoh-pico
-	url = https://github.com/eclipse-zenoh/zenoh-pico.git
+	url = https://github.com/hackathon-develop/zenoh-pico.git
