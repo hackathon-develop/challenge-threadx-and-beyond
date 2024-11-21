@@ -194,6 +194,9 @@ static void xxx_display_thread_entry(ULONG parameter)
 
     while (1)
     {
+        // blank the screen
+        ssd1306_Fill(Black);
+
         { // write IP address
             ULONG ip_address;
             ULONG network_mask;
@@ -213,20 +216,20 @@ static void xxx_display_thread_entry(ULONG parameter)
                 strlcpy(buffer, " xxx.xxx.xxx.xxx", buffer_len);
             }
 
-            // blank the inner section in the orange rectangle
+            // draw the orange rectangle
             ssd1306_DrawRectangle(DISPLAY_X_MIN + 1,
                 DISPLAY_ORANGE_SECTION_Y_MIN + 1,
                 DISPLAY_X_MAX - 1,
                 DISPLAY_ORANGE_SECTION_Y_MAX - 1,
-                Black);
+                White);
 
             ssd1306_SetCursor(DISPLAY_X_MIN + 2, DISPLAY_ORANGE_SECTION_Y_MIN + 2);
             ssd1306_WriteString(buffer, Font_7x10, White);
         }
 
-        // blank the inner section of the blue retangle
+        // draw the blue rectangle
         ssd1306_DrawRectangle(
-            DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, Black);
+            DISPLAY_X_MIN + 1, DISPLAY_BLUE_SECTION_Y_MIN + 1, DISPLAY_X_MAX - 1, DISPLAY_Y_MAX - 1, White);
 
         // height of the font
         uint8_t const fh = 11;
