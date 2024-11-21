@@ -25,7 +25,7 @@ BUILDDIR="$BASEDIR/build"
 
 # Create our build folder if required and clear it
 mkdir -p $BUILDDIR
-#rm -rf $BUILDDIR/*
+rm -rf $BUILDDIR/*
 
 # Generate the build system using Ninja
 cmake -B"$BUILDDIR" -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DCMAKE_TOOLCHAIN_FILE=$BASEDIR/../../cmake/arm-gcc-cortex-m4.cmake $BASEDIR

@@ -27,9 +27,9 @@ typedef enum
 // ----------------------------------------------------------------------------
 // WiFi connection config
 // ----------------------------------------------------------------------------
-#define HOSTNAME      "xxx-sdv24"  //Change to unique hostname.
-#define WIFI_SSID     "ICF_Gast"
-#define WIFI_PASSWORD "icfwlan11"
+#define HOSTNAME      "eclipse-threadx"  //Change to unique hostname.
+#define WIFI_SSID     ""
+#define WIFI_PASSWORD ""
 #define WIFI_MODE     WPA2_PSK_AES
 
 #endif // _CLOUD_CONFIG_H
