@@ -12,25 +12,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
-      - uses: cachix/install-nix-action@v27
+          submodules: recursive
+      - uses: cachix/install-nix-action@v30
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
       - run: nix flake check
 
   build:
     name: Nix build the ThreadX Demo
-    needs: checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: true
-      - uses: cachix/install-nix-action@v27
+          submodules: recursive
+      - uses: cachix/install-nix-action@v30
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - run: nix build .?submodules=1 --print-build-logs
-        uses: actions/upload-artifact@v4
+      - run: nix build .\?submodules=1\#default --print-build-logs
+      - uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: result/
