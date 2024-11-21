@@ -7,9 +7,12 @@
 #include "string.h"
 #include "tx_port.h"
 #include "wwd_networking.h"
-
+#include "mqtt.h"
 
 #define ECLIPSETX_THREAD_PRIORITY   4
+
+static volatile lsm6dsl_data_t xxx_imu_data;
+static volatile UCHAR xxx_imu_data_ready = 0;
 
 //
 // Network Thread
@@ -17,6 +20,7 @@
 #define NETWORK_THREAD_STACK_SIZE 4096
 TX_THREAD xxx_network_thread;
 ULONG xxx_network_thread_stack[NETWORK_THREAD_STACK_SIZE / sizeof(ULONG)];
+static NXD_MQTT_CLIENT          mqtt_client;
 
 static volatile UCHAR xxx_network_ready = 0;
 // Entry function to setup the network
@@ -24,6 +28,11 @@ static void xxx_network_thread_entry(ULONG parameter)
 {
     xxx_network_ready = 0;
     UINT status;
+
+    // buffer for string formatting
+    CHAR buffer[64] = "";
+    size_t buffer_len = sizeof(buffer);
+
     printf("INFO: Initializing the network");
     
     // Initialize the network
@@ -38,8 +47,30 @@ static void xxx_network_thread_entry(ULONG parameter)
         printf("ERROR: failled to connect to connect to network");
         return;
     }
-    printf("INFO: Network initialization complete");
+    printf("INFO: Network initialization complete\n");
     xxx_network_ready = 1;
+
+    if ((status = mqtt_client_connect_subscribe(&nx_ip, nx_pool)))
+    {
+        printf("ERROR: failed to connect to an mqtt broker");
+        return;
+    }
+    printf("INFO: Connected to MQTT broker\n");
+
+    while (1){
+        if (xxx_imu_data_ready){
+            snprintf(buffer, buffer_len, "a:%03d, b:%03d ,c:%03d",
+                (int16_t) (xxx_imu_data.angular_rate_mdps[0]/(float) 100.0), 
+                (int16_t) (xxx_imu_data.angular_rate_mdps[1]/(float) 100.0),
+                (int16_t) (xxx_imu_data.angular_rate_mdps[2]/(float) 100.0));
+
+            mqtt_client_publish(buffer);
+        }
+
+        tx_thread_sleep(TX_TIMER_TICKS_PER_SECOND*1);
+    }
+
+    mqtt_client_disconnect();
 }
 
 
@@ -49,10 +80,6 @@ static void xxx_network_thread_entry(ULONG parameter)
 #define SENSOR_THREAD_STACK_SIZE 4096
 TX_THREAD xxx_sensor_thread;
 ULONG xxx_sensor_thread_stack[SENSOR_THREAD_STACK_SIZE / sizeof(ULONG)];
-
-static volatile lsm6dsl_data_t xxx_imu_data;
-static volatile UCHAR xxx_imu_data_ready = 0;
-
 
 // Entry function for the sensor thread
 static void xxx_sensor_thread_entry(ULONG parameter)

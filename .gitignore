@@ -4,6 +4,7 @@
 *.htm
 *.map
 *.o
+*.xz
 .cache/
 .direnv/
 .metadata/
